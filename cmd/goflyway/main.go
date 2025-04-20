@@ -45,6 +45,63 @@ func printHelp(a ...interface{}) {
 	os.Exit(0)
 }
 
+func runServer(addr string, sconfig *goflyway.ServerConfig) error {
+	if httpsProxy != "" {
+		v.Vprint("server listen on ", addr, " (https://", httpsProxy, ")")
+		m := &autocert.Manager{
+			Cache:      autocert.DirCache("secret-dir"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(httpsProxy),
+		}
+		s := &http.Server{
+			Addr:      addr,
+			TLSConfig: m.TLSConfig(),
+		}
+		for i, p := range s.TLSConfig.NextProtos {
+			if p == "h2" {
+				s.TLSConfig.NextProtos[i] = "h2-disabled"
+			}
+		}
+		s.Handler = &connector{
+			timeout: sconfig.Timeout,
+			auth:    sconfig.Key,
+		}
+		if os.Getenv("GFW_TEST") == "1" {
+			return s.ListenAndServe()
+		}
+		return s.ListenAndServeTLS("", "")
+	}
+
+	v.Vprint("server listen on ", addr)
+	return goflyway.NewServer(addr, sconfig)
+}
+
+func runClient(localAddr, remoteAddr, addr string, cconfig *goflyway.ClientConfig, resetTraffic bool) error {
+	cconfig.Bind = remoteAddr
+	cconfig.Upstream = addr
+	cconfig.Stat = &goflyway.Traffic{}
+
+	if v.Verbose > 0 {
+		go watchTraffic(cconfig, resetTraffic)
+	}
+	if cconfig.Dynamic {
+		v.Vprint("dynamic: forward ", localAddr, " to * through ", addr)
+	} else {
+		v.Vprint("forward ", localAddr, " to ", remoteAddr, " through ", addr)
+	}
+	if cconfig.WebSocket {
+		v.Vprint("relay: use Websocket protocol")
+	}
+	if a := os.Getenv("http_proxy") + os.Getenv("HTTP_PROXY"); a != "" {
+		v.Vprint("note: system HTTP proxy is set to: ", a)
+	}
+	if a := os.Getenv("https_proxy") + os.Getenv("HTTPS_PROXY"); a != "" {
+		v.Vprint("note: system HTTPS proxy is set to: ", a)
+	}
+
+	return goflyway.NewClient(localAddr, cconfig)
+}
+
 func main() {
 	sched.Verbose = false
 
@@ -164,57 +221,9 @@ func main() {
 	}
 
 	if localAddr != "" && remoteAddr != "" {
-		cconfig.Bind = remoteAddr
-		cconfig.Upstream = addr
-		cconfig.Stat = &goflyway.Traffic{}
-
-		if v.Verbose > 0 {
-			go watchTraffic(cconfig, resetTraffic)
-		}
-		if cconfig.Dynamic {
-			v.Vprint("dynamic: forward ", localAddr, " to * through ", addr)
-		} else {
-			v.Vprint("forward ", localAddr, " to ", remoteAddr, " through ", addr)
-		}
-		if cconfig.WebSocket {
-			v.Vprint("relay: use Websocket protocol")
-		}
-		if a := os.Getenv("http_proxy") + os.Getenv("HTTP_PROXY"); a != "" {
-			v.Vprint("note: system HTTP proxy is set to: ", a)
-		}
-		if a := os.Getenv("https_proxy") + os.Getenv("HTTPS_PROXY"); a != "" {
-			v.Vprint("note: system HTTPS proxy is set to: ", a)
-		}
-
-		v.Eprint(goflyway.NewClient(localAddr, cconfig))
-	} else if httpsProxy != "" {
-		v.Vprint("server listen on ", addr, " (https://", httpsProxy, ")")
-		m := &autocert.Manager{
-			Cache:      autocert.DirCache("secret-dir"),
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(httpsProxy),
-		}
-		s := &http.Server{
-			Addr:      addr,
-			TLSConfig: m.TLSConfig(),
-		}
-		for i, p := range s.TLSConfig.NextProtos {
-			if p == "h2" {
-				s.TLSConfig.NextProtos[i] = "h2-disabled"
-			}
-		}
-		s.Handler = &connector{
-			timeout: sconfig.Timeout,
-			auth:    sconfig.Key,
-		}
-		if os.Getenv("GFW_TEST") == "1" {
-			v.Eprint(s.ListenAndServe())
-		} else {
-			v.Eprint(s.ListenAndServeTLS("", ""))
-		}
+		v.Eprint(runClient(localAddr, remoteAddr, addr, cconfig, resetTraffic))
 	} else {
-		v.Vprint("server listen on ", addr)
-		v.Eprint(goflyway.NewServer(addr, sconfig))
+		v.Eprint(runServer(addr, sconfig))
 	}
 }
 
