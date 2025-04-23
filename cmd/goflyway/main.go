@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -42,6 +43,7 @@ func printHelp(a ...interface{}) {
 		fmt.Println(a...)
 	}
 	fmt.Println("usage: goflyway -DLhHUvkqpPtTwWy address:port")
+	flag.PrintDefaults()
 	os.Exit(0)
 }
 
@@ -105,103 +107,122 @@ func runClient(localAddr, remoteAddr, addr string, cconfig *goflyway.ClientConfi
 func main() {
 	sched.Verbose = false
 
-	for i, last := 1, rune(0); i < len(os.Args); i++ {
-		p := strings.TrimLeft(os.Args[i], "-")
+	// 定义标志
+	var (
+		showHelp       = flag.Bool("h", false, "Show help")
+		isQuiet        = flag.Bool("q", false, "Quiet mode")
+		isDynamic      = flag.Bool("D", false, "Enable dynamic mode")
+		useWebSocket   = flag.Bool("w", false, "Use WebSocket protocol")
+		resetStats     = flag.Bool("y", false, "Reset traffic statistics")
+		verboseLevel   = flag.Int("v", 0, "Verbose level (1-3)")
+		key            = flag.String("k", "", "Encryption key")
+		altKey         = flag.String("p", "", "Alias for -k")
+		timeout        = flag.String("t", "", "Timeout in seconds")
+		speedLimit     = flag.String("T", "", "Speed limit in bytes per second")
+		writeBuffer    = flag.String("W", "", "Write buffer size")
+		proxyPass      = flag.String("P", "", "Proxy pass address")
+		pathPattern    = flag.String("U", "", "URL path pattern")
+		httpsProxyFlag = flag.String("H", "", "HTTPS proxy name")
+		configFile     = flag.String("c", "", "Config file path")
+		localAddrFlag  = flag.String("L", "", "Local address (format: [local_ip:]local_port[:remote_ip:]remote_port)")
+	)
 
-		// HACK: ss-local compatible command flags
-		if p == "fast-open" || p == "V" || p == "u" || p == "m" || p == "b" {
-			if i < len(os.Args)-1 && !strings.HasPrefix(os.Args[i+1], "-") {
-				i++
-			}
-			continue
-		}
-
-		if len(p) != len(os.Args[i]) {
-			for i, c := range p {
-				switch c {
-				case 'h':
-					printHelp()
-				//case 'V':
-				//	printHelp(version)
-				case 'L', 'P', 'p', 'k', 't', 'T', 'W', 'H', 'U', 'D', 'c':
-					last = c
-				case 'v':
-					v.Verbose++
-				case 'q':
-					v.Verbose = -1
-				case 'w':
-					cconfig.WebSocket = true
-				case 'y':
-					resetTraffic = true
-				case '=':
-					i++
-					fallthrough
-				default:
-					if last == 0 {
-						printHelp("illegal option --", string(c))
-					}
-					p = p[i:]
-					goto PARSE
-				}
-			}
-			continue
-		}
-	PARSE:
-		if strings.HasPrefix(p, "\"") {
-			if p, _ = strconv.Unquote(p); p == "" {
-				printHelp("illegal option --", string(last))
-			}
-		}
-		switch last {
-		case 'D':
-			cconfig.Dynamic = true
-			fallthrough
-		case 'L':
-			switch parts := strings.Split(p, ":"); len(parts) {
-			case 1:
-				localAddr = ":" + parts[0]
-			case 2:
-				localAddr = p
-			case 3:
-				localAddr, remoteAddr = ":"+parts[0], parts[1]+":"+parts[2]
-			case 4:
-				localAddr, remoteAddr = parts[0]+":"+parts[1], parts[2]+":"+parts[3]
-			default:
-				printHelp("illegal option --", string(last), p)
-			}
-		case 'P':
-			sconfig.ProxyPassAddr = p
-		case 'U':
-			cconfig.PathPattern = p
-		case 'T':
-			speed, _ := strconv.ParseInt(p, 10, 64)
-			sconfig.SpeedThrot = goflyway.NewTokenBucket(speed, speed*25)
-		case 'W':
-			writebuffer, _ := strconv.ParseInt(p, 10, 64)
-			sconfig.WriteBuffer, cconfig.WriteBuffer = writebuffer, writebuffer
-		case 't':
-			*(*int64)(&cconfig.Timeout), _ = strconv.ParseInt(p+"000000000", 10, 64)
-			sconfig.Timeout = cconfig.Timeout
-		case 'p', 'k':
-			sconfig.Key, cconfig.Key = p, p
-		case 'H':
-			cconfig.URLHeader = p
-			httpsProxy = p
-		case 'c':
-			buf, _ := ioutil.ReadFile(p)
-			cmds := make(map[string]interface{})
-			json.Unmarshal(buf, &cmds)
-			cconfig.Key, cconfig.VPN = cmds["password"].(string), true
-			addr = fmt.Sprintf("%v:%v", cmds["server"], cmds["server_port"])
-
-			v.Verbose = 3
-			v.Vprint(os.Args, " config: ", cmds)
-		default:
-			addr = p
-		}
-		last = 0
+	// 自定义帮助函数
+	flag.Usage = func() {
+		printHelp()
 	}
 
+	// 解析
+	flag.Parse()
+
+	// 处理帮助
+	if *showHelp {
+		printHelp()
+	}
+
+	// 设置详细程度
+	if *isQuiet {
+		v.Verbose = -1
+	} else {
+		v.Verbose = *verboseLevel
+	}
+
+	// 设置配置
+	cconfig.WebSocket = *useWebSocket
+	cconfig.Dynamic = *isDynamic
+	resetTraffic = *resetStats
+
+	// 处理本地地址
+	if *localAddrFlag != "" {
+		parts := strings.Split(*localAddrFlag, ":")
+		switch len(parts) {
+		case 1:
+			localAddr = ":" + parts[0]
+		case 2:
+			localAddr = *localAddrFlag
+		case 3:
+			localAddr, remoteAddr = ":"+parts[0], parts[1]+":"+parts[2]
+		case 4:
+			localAddr, remoteAddr = parts[0]+":"+parts[1], parts[2]+":"+parts[3]
+		default:
+			printHelp("illegal option -L", *localAddrFlag)
+		}
+	}
+
+	// 处理其他参数
+	if *key != "" {
+		sconfig.Key, cconfig.Key = *key, *key
+	}
+	if *altKey != "" {
+		sconfig.Key, cconfig.Key = *altKey, *altKey
+	}
+	if *timeout != "" {
+		t, _ := strconv.ParseInt(*timeout+"000000000", 10, 64)
+		*(*int64)(&cconfig.Timeout) = t
+		sconfig.Timeout = cconfig.Timeout
+	}
+	if *speedLimit != "" {
+		speed, _ := strconv.ParseInt(*speedLimit, 10, 64)
+		sconfig.SpeedThrot = goflyway.NewTokenBucket(speed, speed*25)
+	}
+	if *writeBuffer != "" {
+		writebuffer, _ := strconv.ParseInt(*writeBuffer, 10, 64)
+		sconfig.WriteBuffer, cconfig.WriteBuffer = writebuffer, writebuffer
+	}
+	if *proxyPass != "" {
+		sconfig.ProxyPassAddr = *proxyPass
+	}
+	if *pathPattern != "" {
+		cconfig.PathPattern = *pathPattern
+	}
+	if *httpsProxyFlag != "" {
+		cconfig.URLHeader = *httpsProxyFlag
+		httpsProxy = *httpsProxyFlag
+	}
+
+	// 处理配置文件
+	if *configFile != "" {
+		buf, err := ioutil.ReadFile(*configFile)
+		if err != nil {
+			printHelp("failed to read config file:", err)
+		}
+		cmds := make(map[string]interface{})
+		if err := json.Unmarshal(buf, &cmds); err != nil {
+			printHelp("failed to parse config file:", err)
+		}
+		cconfig.Key, cconfig.VPN = cmds["password"].(string), true
+		addr = fmt.Sprintf("%v:%v", cmds["server"], cmds["server_port"])
+		v.Verbose = 3
+		v.Vprint(os.Args, " config: ", cmds)
+	}
+
+	// 处理地址参数
+	args := flag.Args()
+	if len(args) > 0 {
+		addr = args[0]
+	}
+
+	// 默认地址逻辑
 	if addr == "" {
 		if localAddr == "" {
 			v.Vprint("assume you want a default server at :8100")
@@ -211,6 +232,7 @@ func main() {
 		}
 	}
 
+	// 处理远程地址
 	if localAddr != "" && remoteAddr == "" {
 		_, port, err1 := net.SplitHostPort(localAddr)
 		host, _, err2 := net.SplitHostPort(addr)
@@ -220,6 +242,7 @@ func main() {
 		}
 	}
 
+	// 启动客户端或服务器
 	if localAddr != "" && remoteAddr != "" {
 		v.Eprint(runClient(localAddr, remoteAddr, addr, cconfig, resetTraffic))
 	} else {
