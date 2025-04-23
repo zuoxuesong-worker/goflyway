@@ -30,7 +30,6 @@ var (
 	version      = "__devel__"
 	remoteAddr   string
 	localAddr    string
-	addr         string
 	httpsProxy   string
 	resetTraffic bool
 	cconfig      = &goflyway.ClientConfig{}
@@ -104,9 +103,7 @@ func runClient(localAddr, remoteAddr, addr string, cconfig *goflyway.ClientConfi
 	return goflyway.NewClient(localAddr, cconfig)
 }
 
-func main() {
-	sched.Verbose = false
-
+func parseCommandLine() (mode string, serverAddr string) {
 	// 定义标志
 	var (
 		showHelp       = flag.Bool("h", false, "Show help")
@@ -211,7 +208,7 @@ func main() {
 			printHelp("failed to parse config file:", err)
 		}
 		cconfig.Key, cconfig.VPN = cmds["password"].(string), true
-		addr = fmt.Sprintf("%v:%v", cmds["server"], cmds["server_port"])
+		serverAddr = fmt.Sprintf("%v:%v", cmds["server"], cmds["server_port"])
 		v.Verbose = 3
 		v.Vprint(os.Args, " config: ", cmds)
 	}
@@ -219,14 +216,14 @@ func main() {
 	// 处理地址参数
 	args := flag.Args()
 	if len(args) > 0 {
-		addr = args[0]
+		serverAddr = args[0]
 	}
 
 	// 默认地址逻辑
-	if addr == "" {
+	if serverAddr == "" {
 		if localAddr == "" {
 			v.Vprint("assume you want a default server at :8100")
-			addr = ":8100"
+			serverAddr = ":8100"
 		} else {
 			printHelp("missing address:port to listen/connect")
 		}
@@ -235,18 +232,49 @@ func main() {
 	// 处理远程地址
 	if localAddr != "" && remoteAddr == "" {
 		_, port, err1 := net.SplitHostPort(localAddr)
-		host, _, err2 := net.SplitHostPort(addr)
+		host, _, err2 := net.SplitHostPort(serverAddr)
 		remoteAddr = host + ":" + port
 		if err1 != nil || err2 != nil {
-			printHelp("invalid address --", localAddr, addr)
+			printHelp("invalid address --", localAddr, serverAddr)
 		}
 	}
 
-	// 启动客户端或服务器
+	// 确定运行模式
 	if localAddr != "" && remoteAddr != "" {
-		v.Eprint(runClient(localAddr, remoteAddr, addr, cconfig, resetTraffic))
+		mode = "client"
 	} else {
-		v.Eprint(runServer(addr, sconfig))
+		mode = "server"
+	}
+
+	return mode, serverAddr
+}
+
+func startClient(localAddr, remoteAddr, serverAddr string) {
+	v.Eprint(runClient(localAddr, remoteAddr, serverAddr, cconfig, resetTraffic))
+}
+
+func startServer(serverAddr string) {
+	v.Eprint(runServer(serverAddr, sconfig))
+}
+
+func main() {
+	sched.Verbose = false
+
+	// 解析命令行参数
+	mode, serverAddr := parseCommandLine()
+
+	// 根据模式启动客户端或服务器
+	switch mode {
+	case "client":
+		v.Vprint("Starting client mode")
+		v.Vprint("Local address:", localAddr)
+		v.Vprint("Remote address:", remoteAddr)
+		v.Vprint("Server address:", serverAddr)
+		startClient(localAddr, remoteAddr, serverAddr)
+	case "server":
+		v.Vprint("Starting server mode")
+		v.Vprint("Listen address:", serverAddr)
+		startServer(serverAddr)
 	}
 }
 
