@@ -319,5 +319,5 @@ __pycache__/
 OpenCover/
 heap.txt
 *.keystore 
-cmd/goflyway/lib
+cmd/regulaway/lib
 shadowsocks*

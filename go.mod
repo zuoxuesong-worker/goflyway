@@ -1,4 +1,4 @@
-module github.com/coyove/goflyway
+module github.com/coyove/regulaway
 
 go 1.23.0
 

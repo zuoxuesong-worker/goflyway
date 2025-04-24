@@ -10,7 +10,7 @@ def valid(key):
 
 class WSGIGofwRelayApplication(object):
     def handler(self, environ, start_response):
-        """goflyway mitm relay proxy in python
+        """regulaway mitm relay proxy in python
         """
 
         try:

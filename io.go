@@ -1,11 +1,11 @@
-package goflyway
+package regulaway
 
 import (
 	"io"
 	"net"
 	"sync/atomic"
 
-	. "github.com/coyove/goflyway/v"
+	. "github.com/coyove/regulawayy/v"
 )
 
 func Bridge(target, source net.Conn, timeout *TokenBucket, stat *Traffic) {
