@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/coyove/common/sched"
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway/v"
 )
 
 const (

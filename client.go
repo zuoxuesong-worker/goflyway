@@ -1,4 +1,4 @@
-package goflyway
+package regulaway
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coyove/goflyway/toh"
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway/toh"
+	"github.com/edgewize-io/regulaway/v"
 
 	"net"
 )

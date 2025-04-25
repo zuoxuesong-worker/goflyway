@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/coyove/common/waitobject"
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway/v"
 )
 
 var (

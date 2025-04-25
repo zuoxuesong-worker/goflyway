@@ -1,12 +1,12 @@
-# goflyway v2 - 基于HTTP的本地端口转发工具
+# regulaway v2 - 基于HTTP的本地端口转发工具
 
-![](https://raw.githubusercontent.com/coyove/goflyway/gdev/.misc/logo.png)
+![](https://raw.githubusercontent.com/coyove/regulaway/gdev/.misc/logo.png)
 
-`master` 分支是活跃的开发分支，包含v2版本代码。稳定的v1版本（曾被称为v2.0）请参考 [v1.0分支](https://github.com/coyove/goflyway/tree/v1.0)。
+`master` 分支是活跃的开发分支，包含v2版本代码。稳定的v1版本（曾被称为v2.0）请参考 [v1.0分支](https://github.com/coyove/regulaway/tree/v1.0)。
 
-goflyway v2 是一个特殊的工具，可以安全地将本地端口转发到远程服务器，类似于 `ssh -L` 功能。
+regulaway v2 是一个特殊的工具，可以安全地将本地端口转发到远程服务器，类似于 `ssh -L` 功能。
 
-goflyway 使用纯HTTP POST请求来中继TCP连接。这里不需要也不涉及CONNECT方法，因为goflyway主要设计用于那些处于无CONNECT方法的HTTP代理后面的用户，或者希望通过静态CDN加速连接的用户。
+regulaway 使用纯HTTP POST请求来中继TCP连接。这里不需要也不涉及CONNECT方法，因为regulaway主要设计用于那些处于无CONNECT方法的HTTP代理后面的用户，或者希望通过静态CDN加速连接的用户。
 
 然而，如果您已经有更好的网络环境，纯HTTP请求无疑会浪费带宽。因此，可以使用 `-w` 选项开启WebSocket中继，或者在可能的情况下使用 `-K` 开启KCP中继。
 
@@ -14,29 +14,29 @@ goflyway 使用纯HTTP POST请求来中继TCP连接。这里不需要也不涉�
 通过 `server:80` 将 `localhost:1080` 转发到 `server:1080`
 
 ```
-    服务器: ./goflyway :80
-    客户端: ./goflyway -L 1080::1080 server:80 -p password
+    服务器: ./regulaway :80
+    客户端: ./regulaway -L 1080::1080 server:80 -p password
 ```
 
 通过 `server:80` 使用WebSocket将 `localhost:1080` 转发到 `server2:1080`
 
 ```
-    服务器: ./goflyway :80
-    客户端: ./goflyway -w -L 1080:server2:1080 server:80 -p password
+    服务器: ./regulaway :80
+    客户端: ./regulaway -w -L 1080:server2:1080 server:80 -p password
 ```
 
 动态转发 `localhost:1080` 到 `server:80`
 
 ```
-    服务器: ./goflyway :80
-    客户端: ./goflyway -D 1080 server:80 -p password
+    服务器: ./regulaway :80
+    客户端: ./regulaway -D 1080 server:80 -p password
 ```
 
 在同一端口上的HTTP反向代理或静态文件服务器：
 
 ```
-    ./goflyway :80 -P http://127.0.0.1:8080 
-    ./goflyway :80 -P /var/www/html
+    ./regulaway :80 -P http://127.0.0.1:8080 
+    ./regulaway :80 -P /var/www/html
 ```
 
 ## 写入缓冲区
@@ -47,7 +47,7 @@ goflyway 使用纯HTTP POST请求来中继TCP连接。这里不需要也不涉�
 
 ## 测试方法
 
-goflyway 提供了两种测试方法：手动测试和自动化测试。
+regulaway 提供了两种测试方法：手动测试和自动化测试。
 
 ### 1. 手动测试流程
 
@@ -62,13 +62,13 @@ goflyway 提供了两种测试方法：手动测试和自动化测试。
 go run example/websocket_echo_server/main.go
 ```
 
-#### 步骤 2: 启动 goflyway 服务器
+#### 步骤 2: 启动 regulaway 服务器
 
-在另一个终端中，启动 goflyway 服务器：
+在另一个终端中，启动 regulaway 服务器：
 
 ```bash
 # 在端口 8100 启动服务器
-./goflyway -k testkey -w :8100
+./regulaway -k testkey -w :8100
 ```
 
 参数说明：
@@ -76,13 +76,13 @@ go run example/websocket_echo_server/main.go
 - `-w`: 启用 WebSocket 模式
 - `:8100`: 监听 8100 端口
 
-#### 步骤 3: 启动 goflyway 客户端
+#### 步骤 3: 启动 regulaway 客户端
 
-在第三个终端中，启动 goflyway 客户端：
+在第三个终端中，启动 regulaway 客户端：
 
 ```bash
 # 将本地 1080 端口的流量通过代理转发到 WebSocket 服务器
-./goflyway -k testkey -w -L :1080 -D 127.0.0.1:8100
+./regulaway -k testkey -w -L :1080 -D 127.0.0.1:8100
 ```
 
 参数说明：
@@ -97,7 +97,7 @@ go run example/websocket_echo_server/main.go
 使用 WebSocket 客户端（如 wscat）通过代理连接到回显服务器：
 
 ```bash
-# 通过 goflyway 客户端连接到 WebSocket 服务器
+# 通过 regulaway 客户端连接到 WebSocket 服务器
 wscat -c ws://localhost:1080/ws
 ```
 
@@ -111,7 +111,7 @@ wscat -c ws://localhost:1080/ws
 
 ### 2. 自动化测试流程
 
-goflyway 提供了自动化测试用例，可以自动设置和测试整个系统。
+regulaway 提供了自动化测试用例，可以自动设置和测试整个系统。
 
 #### 运行基本功能测试
 
@@ -119,7 +119,7 @@ goflyway 提供了自动化测试用例，可以自动设置和测试整个系�
 go test -v -run TestBasicE2E example/e2e_test/e2e_test.go
 ```
 
-这会运行基本的端到端测试，验证 goflyway 的核心功能。
+这会运行基本的端到端测试，验证 regulaway 的核心功能。
 
 #### 运行压力测试
 
@@ -199,9 +199,9 @@ go test -v -run TestStressE2E example/e2e_test/e2e_test.go -conns=500 -msgs=1000
 
 4. 增加日志详细程度
    ```bash
-   ./goflyway -v -v -k testkey -w :8100
+   ./regulaway -v -v -k testkey -w :8100
    ```
 
 ## 贡献
 
-欢迎提交问题和拉取请求来帮助改进 goflyway！
+欢迎提交问题和拉取请求来帮助改进 regulaway！

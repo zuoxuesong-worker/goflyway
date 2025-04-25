@@ -1,4 +1,4 @@
-package goflyway
+package regulaway
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coyove/goflyway/toh"
-	. "github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway/toh"
+	. "github.com/edgewize-io/regulaway/v"
 )
 
 type commonConfig struct {

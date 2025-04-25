@@ -13,16 +13,16 @@ import (
 	"time"
 
 	"github.com/coyove/common/sched"
-	"github.com/coyove/goflyway"
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway"
+	"github.com/edgewize-io/regulaway/v"
 	"golang.org/x/net/websocket"
 )
 
 var (
-	goflywayServerPort = flag.String("goflyway-server-port", "8000", "goflyway server port")
-	goflywayClientPort = flag.String("goflyway-client-port", "1080", "goflyway client port")
-	wsServerPort       = flag.String("ws-server-port", "8080", "WebSocket server port")
-	testKey            = flag.String("key", "test-key", "Encryption key for test")
+	regulawayServerPort = flag.String("regulaway-server-port", "8000", "regulaway server port")
+	regulawayClientPort = flag.String("regulaway-client-port", "1080", "regulaway client port")
+	wsServerPort        = flag.String("ws-server-port", "8080", "WebSocket server port")
+	testKey             = flag.String("key", "test-key", "Encryption key for test")
 
 	// 极限测试参数
 	concurrentConns = flag.Int("conns", 100, "Number of concurrent connections")
@@ -77,22 +77,22 @@ func generateRandomMessage(size int) string {
 	return string(b)
 }
 
-// 直接使用 cmd/goflyway/main.go 中的方法启动服务器
+// 直接使用 cmd/regulaway/main.go 中的方法启动服务器
 func startServer(addr string, key string) error {
-	sconfig := &goflyway.ServerConfig{}
+	sconfig := &regulaway.ServerConfig{}
 	sconfig.Key = key
 	sconfig.WriteBuffer = 64 * 1024 * 4 // 增加缓冲区大小以处理高并发
 
 	v.Vprint("server listen on", addr)
-	return goflyway.NewServer(addr, sconfig)
+	return regulaway.NewServer(addr, sconfig)
 }
 
-// 直接使用 cmd/goflyway/main.go 中的方法启动客户端
+// 直接使用 cmd/regulaway/main.go 中的方法启动客户端
 func startClient(localAddr, remoteAddr, serverAddr string, key string, webSocket bool) error {
-	cconfig := &goflyway.ClientConfig{}
+	cconfig := &regulaway.ClientConfig{}
 	cconfig.Key = key
 	cconfig.WebSocket = webSocket
-	cconfig.Stat = &goflyway.Traffic{}
+	cconfig.Stat = &regulaway.Traffic{}
 	cconfig.WriteBuffer = 64 * 1024 * 4 // 增加缓冲区大小以处理高并发
 	cconfig.Upstream = serverAddr
 	cconfig.Bind = remoteAddr
@@ -102,7 +102,7 @@ func startClient(localAddr, remoteAddr, serverAddr string, key string, webSocket
 		v.Vprint("relay: use Websocket protocol")
 	}
 
-	return goflyway.NewClient(localAddr, cconfig)
+	return regulaway.NewClient(localAddr, cconfig)
 }
 
 func TestBasicE2E(t *testing.T) {
@@ -116,29 +116,29 @@ func TestBasicE2E(t *testing.T) {
 	defer wsServer.Shutdown(context.Background())
 
 	// 准备地址
-	serverAddr := ":" + *goflywayServerPort
-	localAddr := ":" + *goflywayClientPort
+	serverAddr := ":" + *regulawayServerPort
+	localAddr := ":" + *regulawayClientPort
 	remoteAddr := "127.0.0.1:" + *wsServerPort
 
-	// 启动 goflyway 服务器
+	// 启动 regulaway 服务器
 	serverErr := make(chan error, 1)
 	go func() {
-		t.Logf("Starting goflyway server on port %s", *goflywayServerPort)
+		t.Logf("Starting regulaway server on port %s", *regulawayServerPort)
 		if err := startServer(serverAddr, *testKey); err != nil {
-			serverErr <- fmt.Errorf("goflyway server error: %v", err)
+			serverErr <- fmt.Errorf("regulaway server error: %v", err)
 		}
 	}()
 
 	// 等待服务器启动
 	time.Sleep(1 * time.Second)
 
-	// 启动 goflyway 客户端
+	// 启动 regulaway 客户端
 	clientErr := make(chan error, 1)
 	go func() {
-		t.Logf("Starting goflyway client on port %s", *goflywayClientPort)
+		t.Logf("Starting regulaway client on port %s", *regulawayClientPort)
 		serverFullAddr := "127.0.0.1" + serverAddr
 		if err := startClient(localAddr, remoteAddr, serverFullAddr, *testKey, true); err != nil {
-			clientErr <- fmt.Errorf("goflyway client error: %v", err)
+			clientErr <- fmt.Errorf("regulaway client error: %v", err)
 		}
 	}()
 
@@ -155,7 +155,7 @@ func TestBasicE2E(t *testing.T) {
 	}
 
 	// 连接 WebSocket 客户端
-	t.Logf("Connecting to WebSocket at ws://localhost:%s/ws", *goflywayClientPort)
+	t.Logf("Connecting to WebSocket at ws://localhost:%s/ws", *regulawayClientPort)
 	wsClient, err := connectWebSocketClient(t)
 	if err != nil {
 		t.Fatalf("Failed to connect WebSocket client: %v", err)
@@ -223,29 +223,29 @@ func TestStressE2E(t *testing.T) {
 	defer wsServer.Shutdown(context.Background())
 
 	// 准备地址
-	serverAddr := ":" + *goflywayServerPort
-	localAddr := ":" + *goflywayClientPort
+	serverAddr := ":" + *regulawayServerPort
+	localAddr := ":" + *regulawayClientPort
 	remoteAddr := "127.0.0.1:" + *wsServerPort
 
-	// 启动 goflyway 服务器
+	// 启动 regulaway 服务器
 	serverErr := make(chan error, 1)
 	go func() {
-		logf("Starting goflyway server on port %s", *goflywayServerPort)
+		logf("Starting regulaway server on port %s", *regulawayServerPort)
 		if err := startServer(serverAddr, *testKey); err != nil {
-			serverErr <- fmt.Errorf("goflyway server error: %v", err)
+			serverErr <- fmt.Errorf("regulaway server error: %v", err)
 		}
 	}()
 
 	// 等待服务器启动
 	time.Sleep(1 * time.Second)
 
-	// 启动 goflyway 客户端
+	// 启动 regulaway 客户端
 	clientErr := make(chan error, 1)
 	go func() {
-		logf("Starting goflyway client on port %s", *goflywayClientPort)
+		logf("Starting regulaway client on port %s", *regulawayClientPort)
 		serverFullAddr := "127.0.0.1" + serverAddr
 		if err := startClient(localAddr, remoteAddr, serverFullAddr, *testKey, true); err != nil {
-			clientErr <- fmt.Errorf("goflyway client error: %v", err)
+			clientErr <- fmt.Errorf("regulaway client error: %v", err)
 		}
 	}()
 
@@ -571,7 +571,7 @@ func startWebSocketServer(t *testing.T) *http.Server {
 }
 
 func connectWebSocketClient(t testing.TB) (*websocket.Conn, error) {
-	url := fmt.Sprintf("ws://localhost:%s/ws", *goflywayClientPort)
+	url := fmt.Sprintf("ws://localhost:%s/ws", *regulawayClientPort)
 	if testing.Verbose() {
 		t.Logf("Creating WebSocket config for %s", url)
 	}

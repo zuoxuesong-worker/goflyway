@@ -1,4 +1,4 @@
-package goflyway
+package regulaway
 
 import (
 	"net"

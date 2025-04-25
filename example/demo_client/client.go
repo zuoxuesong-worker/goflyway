@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Add some headers
-	config.Header.Set("User-Agent", "goflyway-client")
+	config.Header.Set("User-Agent", "regulaway-client")
 	config.Header.Set("Origin", "http://localhost")
 
 	// Connect to WebSocket server

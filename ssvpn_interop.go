@@ -1,6 +1,7 @@
+//go:build darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris
 // +build darwin dragonfly freebsd linux netbsd openbsd solaris
 
-package goflyway
+package regulaway
 
 import (
 	"encoding/binary"
@@ -10,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/coyove/goflyway/fd"
+	"github.com/edgewize-io/regulaway/fd"
 )
 
 func vpnDial(address string) (net.Conn, error) {

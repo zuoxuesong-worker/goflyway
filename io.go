@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	. "github.com/coyove/regulawayy/v"
+	. "github.com/edgewize-io/regulaway/v"
 )
 
 func Bridge(target, source net.Conn, timeout *TokenBucket, stat *Traffic) {

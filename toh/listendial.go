@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway/v"
 )
 
 type Listener struct {

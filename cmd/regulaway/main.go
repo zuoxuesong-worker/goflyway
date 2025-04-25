@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/coyove/common/sched"
-	"github.com/coyove/goflyway"
-	"github.com/coyove/goflyway/v"
+	"github.com/edgewize-io/regulaway"
+	"github.com/edgewize-io/regulaway/v"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -32,21 +32,21 @@ var (
 	localAddr    string
 	httpsProxy   string
 	resetTraffic bool
-	cconfig      = &goflyway.ClientConfig{}
-	sconfig      = &goflyway.ServerConfig{}
+	cconfig      = &regulaway.ClientConfig{}
+	sconfig      = &regulaway.ServerConfig{}
 )
 
 func printHelp(a ...interface{}) {
 	if len(a) > 0 {
-		fmt.Printf("goflyway: ")
+		fmt.Printf("regulaway: ")
 		fmt.Println(a...)
 	}
-	fmt.Println("usage: goflyway -DLhHUvkqpPtTwWy address:port")
+	fmt.Println("usage: regulaway -DLhHUvkqpPtTwWy address:port")
 	flag.PrintDefaults()
 	os.Exit(0)
 }
 
-func runServer(addr string, sconfig *goflyway.ServerConfig) error {
+func runServer(addr string, sconfig *regulaway.ServerConfig) error {
 	if httpsProxy != "" {
 		v.Vprint("server listen on ", addr, " (https://", httpsProxy, ")")
 		m := &autocert.Manager{
@@ -74,13 +74,13 @@ func runServer(addr string, sconfig *goflyway.ServerConfig) error {
 	}
 
 	v.Vprint("server listen on ", addr)
-	return goflyway.NewServer(addr, sconfig)
+	return regulaway.NewServer(addr, sconfig)
 }
 
-func runClient(localAddr, remoteAddr, addr string, cconfig *goflyway.ClientConfig, resetTraffic bool) error {
+func runClient(localAddr, remoteAddr, addr string, cconfig *regulaway.ClientConfig, resetTraffic bool) error {
 	cconfig.Bind = remoteAddr
 	cconfig.Upstream = addr
-	cconfig.Stat = &goflyway.Traffic{}
+	cconfig.Stat = &regulaway.Traffic{}
 
 	if v.Verbose > 0 {
 		go watchTraffic(cconfig, resetTraffic)
@@ -100,7 +100,7 @@ func runClient(localAddr, remoteAddr, addr string, cconfig *goflyway.ClientConfi
 		v.Vprint("note: system HTTPS proxy is set to: ", a)
 	}
 
-	return goflyway.NewClient(localAddr, cconfig)
+	return regulaway.NewClient(localAddr, cconfig)
 }
 
 func parseCommandLine() (mode string, serverAddr string) {
@@ -180,7 +180,7 @@ func parseCommandLine() (mode string, serverAddr string) {
 	}
 	if *speedLimit != "" {
 		speed, _ := strconv.ParseInt(*speedLimit, 10, 64)
-		sconfig.SpeedThrot = goflyway.NewTokenBucket(speed, speed*25)
+		sconfig.SpeedThrot = regulaway.NewTokenBucket(speed, speed*25)
 	}
 	if *writeBuffer != "" {
 		writebuffer, _ := strconv.ParseInt(*writeBuffer, 10, 64)
@@ -278,8 +278,8 @@ func main() {
 	}
 }
 
-func watchTraffic(cconfig *goflyway.ClientConfig, reset bool) {
-	path := filepath.Join(os.TempDir(), "goflyway_traffic")
+func watchTraffic(cconfig *regulaway.ClientConfig, reset bool) {
+	path := filepath.Join(os.TempDir(), "regulaway_traffic")
 
 	tmpbuf, _ := ioutil.ReadFile(path)
 	if len(tmpbuf) != 16 || reset {
