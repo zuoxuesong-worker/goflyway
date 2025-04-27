@@ -6,7 +6,6 @@ launch.json
 *.a
 *.csv.*
 .vscode
-build/
 .DS_Store
 ca.pem
 key.pem
