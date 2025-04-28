@@ -17,7 +17,6 @@ jobs:
   build:
     name: Build Container Image
     runs-on: self-hosted
-    if: github.repository == 'edgewize-io/regulaway'
     steps:
       - name: Checkout code 
         uses: actions/checkout@v2
